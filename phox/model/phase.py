@@ -179,11 +179,10 @@ class PhaseCalibration:
             v = np.zeros_like(phase)
             v[phase >= np.pi] = v_pi
             v[phase < np.pi] = v_0
+        elif 0 <= phase < np.pi:
+            v = self.vs[idx_0 + np.argmin(np.abs(np.sin(phase / 2) ** 2 - sr[idx_0:idx_pi]))]
         else:
-            if 0 <= phase < np.pi:
-                v = self.vs[idx_0 + np.argmin(np.abs(np.sin(phase / 2) ** 2 - sr[idx_0:idx_pi]))]
-            else:
-                v = self.vs[idx_pi + np.argmin(np.abs(np.sin(phase / 2) ** 2 - sr[idx_pi:idx_2pi]))]
+            v = self.vs[idx_pi + np.argmin(np.abs(np.sin(phase / 2) ** 2 - sr[idx_pi:idx_2pi]))]
         return v
 
 

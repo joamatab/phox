@@ -35,9 +35,12 @@ class CoherentMeas:
         """
         pu = np.arctan2((powers[1, 0] - powers[3, 0]), \
                         (powers[0, 0] - powers[2, 0])) - np.pi
-        pd = np.arctan2((powers[1, 1] - powers[3, 1]), \
-                        (powers[0, 1] - powers[2, 1])) - np.pi
-        return pd
+        return (
+            np.arctan2(
+                (powers[1, 1] - powers[3, 1]), (powers[0, 1] - powers[2, 1])
+            )
+            - np.pi
+        )
 
     def set_bar(self, c):
         """
@@ -64,11 +67,13 @@ class CoherentMeas:
 
         ## measure power at end of mesh
         inp_power = np.zeros(6)
-        for ii in range(avg_num):
-            if self.backward:
-                inp_power += self.chip.fractional_left
-            else:
-                inp_power += self.chip.fractional_right
+        for _ in range(avg_num):
+            inp_power += (
+                self.chip.fractional_left
+                if self.backward
+                else self.chip.fractional_right
+            )
+
         inp_power /= avg_num
         return inp_power
 
@@ -80,13 +85,12 @@ class CoherentMeas:
         avg_num: each power measurement can be repeated several times
         and averaged to reduce noise, not needed if signal is strong
         """
+        col1 = col
         if self.backward:
-            col1 = col
             col2 = col - 1
             row1 = self.out_mzi_idx_backward[col1]
             row2 = self.out_mzi_idx_backward[col2]
         else:
-            col1 = col
             col2 = col + 1
             row1 = self.out_mzi_idx_forward[col1]
             row2 = self.out_mzi_idx_forward[col2]
@@ -107,11 +111,13 @@ class CoherentMeas:
             time.sleep(0.05)
 
             pp = np.zeros(6)
-            for ii in range(avg_num):
-                if self.backward:
-                    pp += self.chip.fractional_left
-                else:
-                    pp += self.chip.fractional_right
+            for _ in range(avg_num):
+                pp += (
+                    self.chip.fractional_left
+                    if self.backward
+                    else self.chip.fractional_right
+                )
+
             pp /= avg_num
             powers.append(pp)
         powers = np.asarray(powers)
@@ -126,11 +132,13 @@ class CoherentMeas:
 
         ## measure output power, can be used as sanity check
         out_power = np.zeros(6)
-        for ii in range(avg_num):
-            if self.backward:
-                out_power += self.chip.fractional_left
-            else:
-                out_power += self.chip.fractional_right
+        for _ in range(avg_num):
+            out_power += (
+                self.chip.fractional_left
+                if self.backward
+                else self.chip.fractional_right
+            )
+
         out_power /= avg_num
         return phi, theta, out_power, powers
 
@@ -139,21 +147,17 @@ class CoherentMeas:
         after self-config, back propagate through column col
         to reconstruct the input field
         """
+        col1 = col
         if self.backward:
-            col1 = col
             col2 = col - 1
             row1 = self.out_mzi_idx_backward[col1]
             row2 = self.out_mzi_idx_backward[col2]
-            phi = phase_save[(col1, row1)]
-            theta = phase_save[(col2, row2)]
         else:
-            col1 = col
             col2 = col + 1
             row1 = self.out_mzi_idx_forward[col1]
             row2 = self.out_mzi_idx_forward[col2]
-            phi = phase_save[(col1, row1)]
-            theta = phase_save[(col2, row2)]
-
+        phi = phase_save[(col1, row1)]
+        theta = phase_save[(col2, row2)]
         if col == 12:
             H1 = np.asarray([[np.exp(-1j * phi), 0], [0, 1]])
         else:
@@ -161,8 +165,7 @@ class CoherentMeas:
         H2 = np.asarray([[1, 0], [0, np.exp(-1j * theta)]])
         B = np.asarray([[1, -1j], [-1j, 1]]) / np.sqrt(2)
         M = H1 @ B @ H2 @ B
-        out_field = M @ np.asarray([inp_field, 0]).astype(np.complex64)
-        return out_field
+        return M @ np.asarray([inp_field, 0]).astype(np.complex64)
 
     def meas_inp_power(self, avg_num):
         ## set all output MZI to bar state
@@ -176,11 +179,13 @@ class CoherentMeas:
 
         ## measure field power (matrix output)
         meas_vec = np.zeros(6)
-        for nn in range(avg_num):
-            if self.backward:
-                meas_vec += self.chip.fractional_left
-            else:
-                meas_vec += self.chip.fractional_right
+        for _ in range(avg_num):
+            meas_vec += (
+                self.chip.fractional_left
+                if self.backward
+                else self.chip.fractional_right
+            )
+
         meas_vec = meas_vec / avg_num
         return meas_vec
 
@@ -193,11 +198,9 @@ class CoherentMeas:
         """
         if self.backward:
             self.chip.to_layer(0)
-            time.sleep(1.0)
         else:
             self.chip.to_layer(16)
-            time.sleep(1.0)
-
+        time.sleep(1.0)
         ## measure input power
         inp_power_all = self.meas_inp_power(avg_num)
 
@@ -231,14 +234,12 @@ class CoherentMeas:
                 out_field = self.back_prop_layer(inp_field, phase_save, col)
                 rec_field.append(out_field[0])
                 inp_field = out_field[1]
-            rec_field.append(out_field[1])
         else:
             for col in [16, 14, 12, 10]:
                 out_field = self.back_prop_layer(inp_field, phase_save, col)
                 rec_field.append(out_field[0])
                 inp_field = out_field[1]
-            rec_field.append(out_field[1])
-
+        rec_field.append(out_field[1])
         if log_data and (log_dir is not None):
             np.save(os.path.join(log_dir, 'inp_power.npy'), inp_power_all)
             with open(os.path.join(log_dir, 'mesh_phase.pickle'), 'wb') as f:

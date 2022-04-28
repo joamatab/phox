@@ -604,14 +604,14 @@ class AMF420Mesh(ActivePhotonicsImager):
             A tuple of the measured and expected result.
 
         """
-        if not ((v.shape[0] == 4 or v.shape[0] == 5) and (u.shape == (4, 4) or u.shape == (5, 5))):
+        if v.shape[0] not in [4, 5] or u.shape not in [(4, 4), (5, 5)]:
             raise AttributeError(f'Require v.shape == 4 or 5 and u.shape == (4, 4) or (5, 5) but got '
                                  f'v.shape == {v.shape} and u.shape == {u.shape}')
         v = v / np.linalg.norm(v)
         expected = u @ v
 
         if coherent_4_alpha != 0:
-            if not (v.shape[0] == 4 and u.shape == (4, 4)):
+            if v.shape[0] != 4 or u.shape != (4, 4):
                 raise AttributeError(f'Require v.shape == 4 and u.shape == (4, 4) but got '
                                      f'v.shape == {v.shape} and u.shape == {u.shape}')
             v = np.hstack((v, coherent_4_alpha))
@@ -653,12 +653,12 @@ class AMF420Mesh(ActivePhotonicsImager):
         )
 
         def to_layer(*events):
-            ps_tuple = tuple([int(c) for c in ps_dropdown.value.split(', ')])
+            ps_tuple = tuple(int(c) for c in ps_dropdown.value.split(', '))
             self.to_layer(self.ps[ps_tuple].grid_loc[0])
 
         @pn.depends(ps_dropdown.param.value)
         def calibration_image(value):
-            ps_tuple = tuple([int(c) for c in value.split(', ')])
+            ps_tuple = tuple(int(c) for c in value.split(', '))
             p = self.ps[ps_tuple].calibration
             vs_cal = np.sqrt(np.linspace(vlim[0] ** 2, vlim[1] ** 2, len(p.upper_split_ratio)))
             if p is None:
@@ -681,18 +681,18 @@ class AMF420Mesh(ActivePhotonicsImager):
 
         def abs_phase(phase: float):
             def f(*events):
-                ps = tuple([int(c) for c in ps_dropdown.value.split(', ')])
+                ps = tuple(int(c) for c in ps_dropdown.value.split(', '))
                 self.set_phase(ps, phase)
 
             return f
 
         def invert(*events):
-            ps = tuple([int(c) for c in ps_dropdown.value.split(', ')])
+            ps = tuple(int(c) for c in ps_dropdown.value.split(', '))
             self.set_phase(ps, 2 * np.pi - self.ps[ps].phase)
 
         def rel_phase(phase_change: float):
             def f(*events):
-                ps = tuple([int(c) for c in ps_dropdown.value.split(', ')])
+                ps = tuple(int(c) for c in ps_dropdown.value.split(', '))
                 self.set_phase(ps, np.mod(self.ps[ps].phase + phase_change, 2 * np.pi))
 
             return f
@@ -769,8 +769,15 @@ class AMF420Mesh(ActivePhotonicsImager):
 
         @gen.coroutine
         def update_plot():
-            self.spot_pipe.send([(i, p) for i, p in enumerate(self.fractional_left
-                                                              if lr_toggle.value else self.fractional_right)])
+            self.spot_pipe.send(
+                list(
+                    enumerate(
+                        self.fractional_left
+                        if lr_toggle.value
+                        else self.fractional_right
+                    )
+                )
+            )
         cb = PeriodicCallback(update_plot, 100)
 
         def change_power(*events):

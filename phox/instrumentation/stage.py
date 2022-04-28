@@ -197,16 +197,16 @@ class ASI(SerialMixin, Stage):
 
     def aa_query(self):
         read_expr = f':A\sX=({fpr})\s+Y=({fpr})\s\\r\\n'
-        return Command(send_expr=f'AA X? Y? Z?', read_expr=read_expr).execute(self)
+        return Command(send_expr='AA X? Y? Z?', read_expr=read_expr).execute(self)
 
     def aa_set(self, val: int = 85, y: bool = False):
         return Command(send_expr=f'AA Y={val}' if y else f'AA X={val}', read_expr=':A').execute(self)
 
     def aa(self, y: bool = False):
-        return Command(send_expr=f'AA Y' if y else f'AA X', read_expr=':A').execute(self)
+        return Command(send_expr='AA Y' if y else 'AA X', read_expr=':A').execute(self)
 
     def az(self, y: bool = False):
-        return Command(send_expr=f'AZ Y' if y else f'AZ X', read_expr=':A').execute(self)
+        return Command(send_expr='AZ Y' if y else 'AZ X', read_expr=':A').execute(self)
 
     def move_panel(self, xlim: Tuple[float, float] = (-1, 1), ylim: Tuple[float, float] = (-6.18, 0.2),
                    dx: float = 0.001, dy: float = 0.001) -> pn.Pane:

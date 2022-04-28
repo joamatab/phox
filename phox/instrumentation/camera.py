@@ -204,13 +204,12 @@ class XCamera:
         self.thread.join()
 
     def frame(self, wait_time: float = 0) -> np.ndarray:
-        if self.started_frame_loop:
-            time.sleep(wait_time)
-            with self.frame_lock:
-                frame = self._current_frame.copy()
-            return frame
-        else:
+        if not self.started_frame_loop:
             return self._frame()
+        time.sleep(wait_time)
+        with self.frame_lock:
+            frame = self._current_frame.copy()
+        return frame
 
     def _frame(self) -> np.ndarray:
         if not self.started:

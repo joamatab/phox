@@ -57,7 +57,7 @@ class NIDAQControl:
         if np.sum(voltages < self.vmin) > 0:
             raise ValueError(f'All voltages written to channel must be >= {self.vmin}.')
 
-        num_voltages = 1 if not isinstance(voltages, np.ndarray) else voltages.size
+        num_voltages = voltages.size if isinstance(voltages, np.ndarray) else 1
         task = nidaqmx.Task()
         task.ao_channels.add_ao_voltage_chan(self.ao_channels[chan].name)
         if n_callback is not None:

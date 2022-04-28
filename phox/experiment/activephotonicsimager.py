@@ -107,8 +107,10 @@ class ActivePhotonicsImager:
         contours = [Polygon(np.fliplr(contour))
                     for contour in measure.find_contours(img, threshold) if len(contour) > 3]
         contours = [contour for contour in contours if contour.area > 2]
-        contour_centers = [(int(contour.centroid.y), int(contour.centroid.x)) for contour in contours]
-        return contour_centers
+        return [
+            (int(contour.centroid.y), int(contour.centroid.x))
+            for contour in contours
+        ]
 
     def spot_saturation(self, center: Tuple[int, int], window_size: int = 10,
                         plim: Tuple[float, float] = (0.05, 4.25), n_steps: int = 421,

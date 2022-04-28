@@ -104,13 +104,15 @@ def get_update_fn(opt):
 
 
 def get_gradient_predictions(onn_layers, X, y, idx=0):
-    pred = dict()
-    pred['input_1'] = X[idx]
+    pred = {'input_1': X[idx]}
     for layer in (1, 2, 3):
         pred[f'forward_{layer}'] = onn_layers[f'layer{layer}'].propagate(pred[f'input_{layer}'])
         pred[f'input_{layer + 1}'] = np.abs(pred[f'forward_{layer}'][-1]) + 0j
     cost_fn = optical_softmax_cross_entropy(y[idx])
-    pred[f'adjoint_4'] = np.array(jax.grad(cost_fn)(jnp.array(pred[f'input_4'])[np.newaxis, :])).squeeze()
+    pred['adjoint_4'] = np.array(
+        jax.grad(cost_fn)(jnp.array(pred['input_4'])[np.newaxis, :])
+    ).squeeze()
+
     for layer in (3, 2, 1):
         pred[f'error_{layer}'] = pred[f'adjoint_{layer + 1}'].real * np.exp(
             -1j * np.angle(pred[f'forward_{layer}'][-1]))  # abs value nonlinearity
@@ -169,16 +171,23 @@ class BackpropAccuracyTest:
             self.chip.set_unitary_phases(self.onn_layers[f'layer{layer}'].thetas, self.onn_layers[f'layer{layer}'].phis)
             self.meas[f'forward_{layer}'] = self.chip.matrix_prop(self.meas[f'input_{layer}'])
             self.meas[f'input_{layer + 1}'] = np.sqrt(np.abs(self.meas[f'forward_{layer}'][-1][:, :4]))
-            if not phase_cheat:
-                self.meas[f'forward_out_{layer}'] = self.chip.coherent_batch(self.meas[f'input_{layer}'])
-            else:
-                self.meas[f'forward_out_{layer}'] = self.pred[f'forward_{layer}'][-1]
+            self.meas[f'forward_out_{layer}'] = (
+                self.pred[f'forward_{layer}'][-1]
+                if phase_cheat
+                else self.chip.coherent_batch(self.meas[f'input_{layer}'])
+            )
+
             self.chip.set_output_transparent()
 
     def _backward_measure(self, phase_cheat: bool = False):
         cost_fn = [optical_softmax_cross_entropy(self.y[idx]) for idx in self.idx_list]
-        self.meas['adjoint_4'] = np.array([jax.grad(cost_fn[i])(self.meas[f'input_4'][i:i + 1, :]).squeeze()
-                                           for i in range(len(self.idx_list))])
+        self.meas['adjoint_4'] = np.array(
+            [
+                jax.grad(cost_fn[i])(self.meas['input_4'][i : i + 1, :]).squeeze()
+                for i in range(len(self.idx_list))
+            ]
+        )
+
         self.chip.set_transparent()
         self.chip.toggle_propagation_direction()
         for layer in (3, 2, 1):
@@ -268,9 +277,7 @@ class ONN2D:
         xx, yy = np.meshgrid(np.linspace(x_min, x_max, grid_points), np.linspace(x_min, x_max, grid_points))
 
         # Predict the function value for the whole grid
-        inputs = []
-        for x, y in zip(xx.flatten(), yy.flatten()):
-            inputs.append([x, y])
+        inputs = [[x, y] for x, y in zip(xx.flatten(), yy.flatten())]
         inputs = add_bias(np.asarray(inputs, dtype=np.complex64))
 
         Y_hat = model.predict(inputs)

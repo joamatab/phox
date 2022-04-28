@@ -148,25 +148,22 @@ class SerialMixin(object):
             return None, False
         timeout = timeout if timeout != 0 else self.default_timeout  # Use default timeout if one is not provided
         message = ''
-        if self._ser.is_open:
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                message = f'{message}{self._ser.read(self._ser.in_waiting).decode("utf-8")}'
-                match = re.search(expr, message)
-                if match is not None:
-                    logger.debug(f"Matched expression: {expr}")
-                    if group_num is None:
-                        self.lock.release()
-                        return message, True
-                    elif isinstance(group_num, (list, tuple)):
-                        self.lock.release()
-                        return tuple(match.group(i) for i in group_num), True
-                    else:
-                        self.lock.release()
-                        return match.group(group_num), True
-            logger.warning(f'No regex match for: {expr}')
-            self.lock.release()
-            return message, False
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            message = f'{message}{self._ser.read(self._ser.in_waiting).decode("utf-8")}'
+            match = re.search(expr, message)
+            if match is not None:
+                logger.debug(f"Matched expression: {expr}")
+                self.lock.release()
+                if group_num is None:
+                    return message, True
+                elif isinstance(group_num, (list, tuple)):
+                    return tuple(match[i] for i in group_num), True
+                else:
+                    return match[group_num], True
+        logger.warning(f'No regex match for: {expr}')
+        self.lock.release()
+        return message, False
 
     def setup(self):
         pass

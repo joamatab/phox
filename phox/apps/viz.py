@@ -60,14 +60,15 @@ def cmap_map(function, cmap):
     This routine will break any discontinuous points in a colormap.
     """
     cdict = cmap._segmentdata
-    step_dict = {}
-    # Firt get the list of points where the segments start or end
-    for key in ('red', 'green', 'blue'):
-        step_dict[key] = list(map(lambda x: x[0], cdict[key]))
+    step_dict = {
+        key: list(map(lambda x: x[0], cdict[key]))
+        for key in ('red', 'green', 'blue')
+    }
+
     step_list = sum(step_dict.values(), [])
     step_list = np.array(list(set(step_list)))
     # Then compute the LUT, and apply the function to the LUT
-    reduced_cmap = lambda step: np.array(cmap(step)[0:3])
+    reduced_cmap = lambda step: np.array(cmap(step)[:3])
     old_LUT = np.array(list(map(reduced_cmap, step_list)))
     new_LUT = np.array(list(map(function, old_LUT)))
     # Now try to make a minimal segment definition of the new LUT
@@ -79,8 +80,7 @@ def cmap_map(function, cmap):
                 this_cdict[step] = new_LUT[j, i]
             elif new_LUT[j, i] != old_LUT[j, i]:
                 this_cdict[step] = new_LUT[j, i]
-        colorvector = list(map(lambda x: x + (x[1],), this_cdict.items()))
-        colorvector.sort()
+        colorvector = sorted(map(lambda x: x + (x[1],), this_cdict.items()))
         cdict[key] = colorvector
 
     return mpl.colors.LinearSegmentedColormap('colormap', cdict, 1024)
@@ -98,9 +98,7 @@ def plot_planar_boundary(plt, dataset, model, ax=None, grid_points=50):
     xx, yy = np.meshgrid(np.linspace(x_min, x_max, grid_points), np.linspace(x_min, x_max, grid_points))
 
     # Predict the function value for the whole grid
-    inputs = []
-    for x, y in zip(xx.flatten(), yy.flatten()):
-        inputs.append([x, y])
+    inputs = [[x, y] for x, y in zip(xx.flatten(), yy.flatten())]
     inputs = add_bias(np.asarray(inputs, dtype=np.complex64))
 
     Y_hat = model.predict(inputs)
